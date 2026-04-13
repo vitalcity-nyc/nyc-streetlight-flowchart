@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How NYC street lighting works</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #0a0e1a;
+    color: #e0e4ef;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .page-header {
+    text-align: center;
+    padding: 48px 24px 12px;
+  }
+
+  .page-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.5px;
+  }
+
+  .page-header p {
+    font-size: 14px;
+    color: #8891a8;
+    margin-top: 6px;
+  }
+
+  /* Tab navigation */
+  .tab-bar {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    padding: 20px 24px 0;
+    flex-wrap: wrap;
+  }
+
+  .tab-btn {
+    background: transparent;
+    border: 1px solid #1e2640;
+    color: #8891a8;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab-btn:hover { border-color: #3a4568; color: #c0c8e0; }
+
+  .tab-btn.active {
+    background: #fbbf24;
+    border-color: #fbbf24;
+    color: #0a0e1a;
+    font-weight: 600;
+  }
+
+  /* Flow container */
+  .flow-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 28px 24px 60px;
+  }
+
+  .flow-section { display: none; }
+  .flow-section.active { display: block; }
+
+  /* Phase label */
+  .phase-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: #fbbf24;
+    margin-bottom: 16px;
+  }
+
+  /* Flow nodes */
+  .flow-row {
+    display: flex;
+    align-items: stretch;
+    gap: 16px;
+    margin-bottom: 2px;
+    position: relative;
+  }
+
+  .flow-row.centered { justify-content: center; }
+
+  .connector {
+    display: flex;
+    justify-content: center;
+    padding: 0;
+    margin-bottom: 2px;
+  }
+
+  .connector svg { display: block; }
+
+  .node {
+    background: #141929;
+    border: 1px solid #1e2640;
+    border-radius: 12px;
+    padding: 18px 22px;
+    position: relative;
+    transition: all 0.25s;
+    cursor: default;
+    flex: 1;
+    max-width: 520px;
+  }
+
+  .node:hover {
+    border-color: #3a4568;
+    background: #181d30;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+
+  .node-single {
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  .node-wide {
+    max-width: 100%;
+  }
+
+  .node-label {
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .node-desc {
+    font-size: 13px;
+    color: #8891a8;
+    line-height: 1.55;
+  }
+
+  .node-desc strong { color: #c0c8e0; font-weight: 500; }
+
+  .node-desc a, .tl-text a {
+    color: #60a5fa;
+    text-decoration: none;
+    border-bottom: 1px solid #60a5fa33;
+    transition: border-color 0.2s;
+  }
+  .node-desc a:hover, .tl-text a:hover {
+    border-bottom-color: #60a5fa;
+  }
+
+  .source-link {
+    display: inline-block;
+    font-size: 10px;
+    color: #60a5fa;
+    text-decoration: none;
+    margin-top: 6px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+  .source-link:hover { opacity: 1; }
+  .source-link::before { content: "Source: "; color: #555e75; }
+
+  /* Agency badges */
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-top: 8px;
+    margin-right: 4px;
+  }
+
+  .badge-dot   { background: #1a2235; color: #60a5fa; border: 1px solid #1e3a5f; }
+  .badge-con   { background: #1a2220; color: #4ade80; border: 1px solid #1e3f2a; }
+  .badge-council { background: #2a1a35; color: #c084fc; border: 1px solid #3f1e5f; }
+  .badge-pdc   { background: #352a1a; color: #fbbf24; border: 1px solid #5f4a1e; }
+  .badge-omb   { background: #351a1a; color: #f87171; border: 1px solid #5f1e1e; }
+  .badge-311   { background: #1a2a35; color: #67e8f9; border: 1px solid #1e3f5f; }
+  .badge-cb    { background: #1a3520; color: #86efac; border: 1px solid #1e5f2a; }
+  .badge-nypa  { background: #352a1a; color: #fdba74; border: 1px solid #5f3f1e; }
+
+  /* Decision diamond */
+  .decision {
+    background: linear-gradient(135deg, #1a1e35, #1e2445);
+    border: 1px solid #fbbf2444;
+    text-align: center;
+  }
+
+  .decision .node-label { justify-content: center; color: #fbbf24; }
+
+  /* Split paths */
+  .split-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 2px;
+  }
+
+  .split-col {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .split-header {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 10px;
+    border-radius: 8px;
+  }
+
+  .split-header.yes { background: #0f2a1a; color: #4ade80; border: 1px solid #1e5f2a; }
+  .split-header.no  { background: #2a0f1a; color: #f87171; border: 1px solid #5f1e2a; }
+
+  .split-col .node { max-width: 100%; }
+
+  /* Arrow down */
+  .arrow-down {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2px;
+  }
+
+  .arrow-down svg { display: block; }
+
+  /* Outcome node */
+  .outcome {
+    background: linear-gradient(135deg, #0f2a1a, #132e20);
+    border: 1px solid #1e5f2a;
+  }
+
+  .outcome .node-label { color: #4ade80; }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    padding: 0 24px 40px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #8891a8;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+  }
+
+  /* Stat cards */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .stat-card {
+    background: #141929;
+    border: 1px solid #1e2640;
+    border-radius: 10px;
+    padding: 16px 18px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-size: 26px;
+    font-weight: 700;
+    color: #fbbf24;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: #8891a8;
+    margin-top: 2px;
+  }
+
+  /* Timeline */
+  .timeline {
+    position: relative;
+    padding-left: 28px;
+    margin: 16px 0;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 4px;
+    bottom: 4px;
+    width: 2px;
+    background: #1e2640;
+  }
+
+  .tl-item {
+    position: relative;
+    margin-bottom: 18px;
+  }
+
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: -24px;
+    top: 6px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #fbbf24;
+    border: 2px solid #0a0e1a;
+  }
+
+  .tl-year {
+    font-size: 12px;
+    font-weight: 600;
+    color: #fbbf24;
+  }
+
+  .tl-text {
+    font-size: 13px;
+    color: #c0c8e0;
+    line-height: 1.5;
+  }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .split-row { grid-template-columns: 1fr; }
+    .flow-row { flex-direction: column; align-items: center; }
+    .node { max-width: 100%; }
+    .page-header h1 { font-size: 22px; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>How NYC street lighting works</h1>
+  <p>Approval, installation, and maintenance of ~400,000 streetlights</p>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#60a5fa;"></div> DOT</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#4ade80;"></div> Con Edison</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#c084fc;"></div> City Council</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fbbf24;"></div> Public Design Commission</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f87171;"></div> OMB</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#67e8f9;"></div> 311</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#86efac;"></div> Community board</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fdba74;"></div> NYPA</div>
+</div>
+
+<!-- Tab bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="overview">System overview</button>
+  <button class="tab-btn" data-tab="new">New light request</button>
+  <button class="tab-btn" data-tab="repair">Repair / 311</button>
+  <button class="tab-btn" data-tab="funding">Funding</button>
+  <button class="tab-btn" data-tab="led">LED conversion</button>
+</div>
+
+<div class="flow-container">
+
+  <!-- ==================== TAB: NEW LIGHT REQUEST ==================== -->
+  <div class="flow-section" id="tab-new">
+
+    <div class="phase-label">1. Request initiation</div>
+
+    <div class="flow-row centered">
+      <div class="node node-single">
+        <div class="node-label">Request for new streetlight</div>
+        <div class="node-desc">Any resident, community board, elected official, or city agency can initiate a request for a new streetlight or relocation of an existing one via <a href="https://portal.311.nyc.gov/article/?kanumber=KA-02491" target="_blank">311</a>.</div>
+        <span class="badge badge-311">311</span>
+        <span class="badge badge-cb">Community board</span>
+        <span class="badge badge-council">City Council</span>
+      </div>
+    </div>
+
+    <div class="arrow-down"><svg width="2" height="28"><line x1="1" y1="0" x2="1" y2="28" stroke="#fbbf24" stroke-width="2" stroke-dasharray="4,4"/></svg></div>
+
+    <div class="flow-row centered">
+      <div class="node node-single">
+        <div class="node-label">DOT Division of Street Lighting Engineering</div>
+        <div class="node-desc">Receives and evaluates all requests. Assesses lighting needs against <strong><a href="https://www.ies.org/standards/ies-standards-in-rp-8-series/" target="_blank">IES RP-8</a></strong> (roadway and pedestrian lighting standard). Response within <strong>12 weeks</strong>.</div>
+        <span class="badge badge-dot">DOT</span>
+      </div>
+    </div>
+
+    <div class="arrow-down"><svg width="2" height="28"><line x1="1" y1="0" x2="1" y2="28" stroke="#fbbf24" stroke-width="2" stroke-dasharray="4,4"/></svg></div>
+
+    <div class="phase-label">2. Decision point</div>
+
+    <div class="flow-row centered">
+      <div class="node node-single decision">
+        <div class="node-label">Standard or distinctive fixture?</div>
+        <div class="node-desc">Standard lights (steel octagonal pole + LED cobra head) follow a simpler path. Distinctive/decorative lights require multi-agency approval and elected-official funding.</div>
+      </div>
+    </div>
+
+    <div class="arrow-down"><svg width="2" height="20"><line x1="1" y1="0" x2="1" y2="20" stroke="#fbbf24" stroke-width="2" stroke-dasharray="4,4"/></svg></div>
+
+    <div class="split-row">
+      <div class="split-col">
+        <div class="split-header yes">Standard light</div>
+
+        <div class="arrow-down"><svg width="2" height="16"><line x1="1" y1="0" x2="1" y2="16" stroke="#4ade80" stroke-width="2" stroke-dasharray="4,4"/></svg></div>
+
+        <div class="node">
+          <div class="node-label">DOT approves and issues work order</div>
+          <div class="node-desc">DOT engineers design the installation per the <a href="https://www.nycstreetdesign.info/lighting" target="_blank">NYC Street Design Manual</a>. Work order issued to a <strong>licensed NYC electrical contractor</strong> and to Con Edison for power supply.</div>
+          <span class="badge badge-dot">DOT</span>
+          <span class="badge badge-con">Con Edison</span>
+        </div>
+
+        <div class="arrow-down"><svg width="2" height="16"><line x1="1" y1="0" x2="1" y2="16" stroke="#4ade80" stroke-width="2" stroke-dasharray="4,4"/></svg></div>
+
+        <div class="node">
+          <div class="node-label">Physical installation</div>
+          <div class="node-desc">Contractor installs pole, conduit (min. 18" depth per <a href="https://codelibrary.amlegal.com/codes/newyorkcity/latest/NYCrules/0-0-0-62948" target="_blank">Highway Rules Section 2-20</a>), and luminaire. Con Edison provides the electrical connection. DOT's Electrical Inspection Division verifies the work.</div>
+          <span class="badge badge-dot">DOT</span>
+          <span class="badge badge-con">Con Edison</span>
+        </div>
+      </div>
+
+      <div class="split-col">
+        <div class="split-header no">Distinctive / decorative light</div>
+
+        <div class="arrow-down"><svg width="2" height="16"><line x1="1" y1="0" x2="1" y2="16" stroke="#f87171" stroke-width="2" stroke-dasharray="4,4"/></svg></div>
+
+        <div class="node">
+          <div class="node-label">Multi-agency approval required</div>
+          <div class="node-desc">DOT submits proposal on behalf of the applicant to the <strong><a href="https://www.nyc.gov/site/designcommission/design-review/design-guidelines/distinctive-lights.page" target="_blank">Public Design Commission</a></strong> (or Local Preservation Commission) and <strong>OMB</strong>. Fixtures must be sympathetic to neighborhood character.</div>
+          <span class="badge badge-pdc">Public Design Commission</span>
+          <span class="badge badge-omb">OMB</span>
+          <span class="badge badge-dot">DOT</span>
+        </div>
+
+        <div class="arrow-down"><svg width="2" height="16"><line x1="1" y1="0" x2="1" y2="16" stroke="#f87171" stroke-width="2" stroke-dasharray="4,4"/></svg></div>
+
+        <div class="node">
+          <div class="node-label">Elected official funding secured</div>
+          <div class="node-desc">Distinctive lighting <strong>must be funded through elected officials</strong> -- City Council members or borough presidents via discretionary capital funds.</div>
+          <span class="badge badge-council">City Council</span>
+        </div>
+
+        <div class="arrow-down"><svg width="2" height="16"><line x1="1" y1="0" x2="1" y2="16" stroke="#f87171" stroke-width="2" stroke-dasharray="4,4"/></svg></div>
+
+        <div class="node">
+          <div class="node-label">Installation (same process)</div>
+          <div class="node-desc">Once all approvals clear, same physical installation process: licensed contractor + Con Edison connection + DOT inspection.</div>
+          <span class="badge badge-dot">DOT</span>
+          <span class="badge badge-con">Con Edison</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-down"><svg width="2" height="24"><line x1="1" y1="0" x2="1" y2="24" stroke="#fbbf24" stroke-width="2" stroke-dasharray="4,4"/></svg></div>
+
+    <div class="flow-row centered">
+      <div class="node node-single outcome">
+        <div class="node-label">Streetlight operational</div>
+        <div class="node-desc">DOT assumes ownership and maintenance responsibility. Con Edison bills DOT for electricity (estimated usage). Light enters the city's ~400,000-unit inventory. All service requests tracked on <a href="https://data.cityofnewyork.us/Transportation/DOT-Street-Lights-and-Traffic-Signals-311-Service-/jwvp-gyiq" target="_blank">NYC Open Data</a>.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB: REPAIR / 311 ==================== -->
+  <div class="flow-section" id="tab-repair">
+
+    <div class="phase-label">1. Report</div>
+
+    <div class="flow-row centered">
+      <div class="node node-single">
+        <div class="node-label">Resident reports streetlight issue</div>
+        <div class="node-desc">Via <strong><a href="https://portal.311.nyc.gov/article/?kanumber=KA-02463" target="_blank">311</a></strong> (phone, web portal, app) or DOT's dedicated <a href="https://service.nyctmc.org" target="_blank">Street Lighting Repair Form</a>. No contact info required, but email gets confirmation. Report categories: burned out, flickering, on during the day, leaning pole, exposed wires.</div>
+        <span class="badge badge-311">311</span>
+      </div>
+    </div>
+
+    <div class="arrow-down"><svg width="2" height="28"><line x1="1" y1="0" x2="1" y2="28" stroke="#fbbf24" stroke-width="2" stroke-dasharray="4,4"/></svg></div>
+
+    <div class="flow-row centered">
+      <div class="node node-single decision">
+        <div class="node-label">Emergency or non-emergency?</div>
+        <div class="node-desc">Downed power lines = call 911. Fallen pole or active electrical hazard = emergency. Burned out / flickering = non-emergency.</div>
+      </div>
+    </div>
+
+    <div class="arrow-down"><svg width="2" height="20"><line x1="1" y1="0" x2="1" y2="20" stroke="#fbbf24" stroke-width="2" stroke-dasharray="4,4"/></svg></div>
+
+    <div class="phase-label">2. Response</div>
+
+    <div class="split-row">
+      <div class="split-col">
+        <div class="split-header no">Emergency (fallen pole, hazard)</div>
+        <div class="arrow-down"><svg width="2" height="16"><line x1="1" y1="0" x2="1" y2="16" stroke="#f87171" stroke-width="2" stroke-dasharray="4,4"/></svg></div>
+        <div class="node">
+          <div class="node-label">4-hour response</div>
+          <div class="node-desc">DOT's contracted crew must respond within <strong>4 hours</strong>. Area is secured and temporary measures taken.</div>
+          <span class="badge badge-dot">DOT</span>
+        </div>
+      </div>
+      <div class="split-col">
+        <div class="split-header yes">Non-emergency (burned out, flickering)</div>
+        <div class="arrow-down"><svg width="2" height="16"><line x1="1" y1="0" x2="1" y2="16" stroke="#4ade80" stroke-width="2" stroke-dasharray="4,4"/></svg></div>
+        <div class="node">
+          <div class="node-label">10-day response</div>
+          <div class="node-desc">DOT's contracted crew must respond within <strong>10 business days</strong>. Permanent repair within 90-day permit period.</div>
+          <span class="badge badge-dot">DOT</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-down"><svg width="2" height="24"><line x1="1" y1="0" x2="1" y2="24" stroke="#fbbf24" stroke-width="2" stroke-dasharray="4,4"/></svg></div>
+
+    <div class="phase-label">3. Diagnosis and repair</div>
+
+    <div class="flow-row centered">
+      <div class="node node-single decision">
+        <div class="node-label">What's the root cause?</div>
+        <div class="node-desc">DOT contractor diagnoses the issue on site.</div>
+      </div>
+    </div>
+
+    <div class="arrow-down"><svg width="2" height="20"><line x1="1" y1="0" x2="1" y2="20" stroke="#fbbf24" stroke-width="2" stroke-dasharray="4,4"/></svg></div>
+
+    <div class="split-row">
+      <div class="split-col">
+        <div class="split-header yes">DOT-side issue</div>
+        <div class="arrow-down"><svg width="2" height="16"><line x1="1" y1="0" x2="1" y2="16" stroke="#4ade80" stroke-width="2" stroke-dasharray="4,4"/></svg></div>
+        <div class="node">
+          <div class="node-label">DOT contractor repairs</div>
+          <div class="node-desc">Bulb/LED replacement, wiring fix, conduit repair, or pole replacement. Must complete permanent repair within <strong>90-day permit period</strong>.</div>
+          <span class="badge badge-dot">DOT</span>
+        </div>
+      </div>
+      <div class="split-col">
+        <div class="split-header no">Utility-side issue</div>
+        <div class="arrow-down"><svg width="2" height="16"><line x1="1" y1="0" x2="1" y2="16" stroke="#f87171" stroke-width="2" stroke-dasharray="4,4"/></svg></div>
+        <div class="node">
+          <div class="node-label">Referred to Con Edison</div>
+          <div class="node-desc">Power supply problems, nearby construction impacts, or utility feed issues are escalated to <strong>Con Edison</strong> for resolution.</div>
+          <span class="badge badge-con">Con Edison</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-down"><svg width="2" height="24"><line x1="1" y1="0" x2="1" y2="24" stroke="#fbbf24" stroke-width="2" stroke-dasharray="4,4"/></svg></div>
+
+    <div class="flow-row centered">
+      <div class="node node-single" style="border-color: #5f1e2a;">
+        <div class="node-label" style="color: #f87171;">If still out after 90 days</div>
+        <div class="node-desc">Resident should contact their <strong>Borough Commissioner Office</strong> directly. <a href="https://council.nyc.gov/data/311-agency/" target="_blank">NYC Council analysis</a> has found DOT resolution reporting can be inconsistent around deadline marks.</div>
+        <span class="badge badge-dot">DOT</span>
+        <span class="badge badge-council">City Council</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB: FUNDING ==================== -->
+  <div class="flow-section" id="tab-funding">
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-num">~$50M</div>
+        <div class="stat-label">Annual electricity cost (DOT to Con Ed)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">~$90K</div>
+        <div class="stat-label">Cost per block (new sidewalk lighting)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">$27M</div>
+        <div class="stat-label">Est. annual cost of new sidewalk mandate</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">$76.5M</div>
+        <div class="stat-label">Total LED conversion project cost</div>
+      </div>
+    </div>
+
+    <div class="phase-label">Funding sources</div>
+
+    <div class="flow-row">
+      <div class="node">
+        <div class="node-label">City expense budget</div>
+        <div class="node-desc">Covers DOT's <strong>~$50M annual electricity bill</strong> to Con Edison (295.5M kWh estimated usage, per DOT's <a href="https://www.nyc.gov/html/dot/downloads/pdf/sustainablestreetlighting.pdf" target="_blank">"Green Light" report</a>) and routine maintenance contracts with licensed electrical contractors.</div>
+        <span class="badge badge-omb">OMB</span>
+        <span class="badge badge-dot">DOT</span>
+      </div>
+      <div class="node">
+        <div class="node-label">City capital budget</div>
+        <div class="node-desc">Funds larger infrastructure: new pole installations, underground conduit, major system upgrades. Subject to OMB review and City Council approval.</div>
+        <span class="badge badge-omb">OMB</span>
+        <span class="badge badge-council">City Council</span>
+      </div>
+    </div>
+
+    <div style="height: 12px;"></div>
+
+    <div class="flow-row">
+      <div class="node">
+        <div class="node-label">Council member discretionary funds</div>
+        <div class="node-desc">Each of <strong>51 Council members</strong> receives an annual allocation for local needs. Can direct capital funds toward streetlight projects. <strong>Required</strong> for all distinctive/decorative lighting.</div>
+        <span class="badge badge-council">City Council</span>
+      </div>
+      <div class="node">
+        <div class="node-label">Community board budget requests</div>
+        <div class="node-desc">Community boards submit annual requests to upgrade illumination in their districts. <strong>Advisory only</strong> -- not binding, but influences budget priorities.</div>
+        <span class="badge badge-cb">Community board</span>
+      </div>
+    </div>
+
+    <div style="height: 12px;"></div>
+
+    <div class="flow-row">
+      <div class="node">
+        <div class="node-label">NYPA financing (LED conversion)</div>
+        <div class="node-desc"><a href="https://www.nypa.gov/news/press-releases/2019/20190418-smart-street-lighting-ny" target="_blank">New York Power Authority</a> provided <strong>upfront financing</strong> for the statewide LED conversion. Municipalities repay from energy savings generated by reduced electricity use of LED fixtures.</div>
+        <span class="badge badge-nypa">NYPA</span>
+      </div>
+      <div class="node">
+        <div class="node-label">Private expense (relocations)</div>
+        <div class="node-desc">When a private party requests relocation of an existing streetlight, <strong>all costs are borne by the applicant</strong>. Must use a licensed NYC electrical contractor and coordinate with Con Edison. <a href="https://www.nyc.gov/html/dot/downloads/pdf/street-light-relocation.pdf" target="_blank">See DOT conditions</a>.</div>
+        <span class="badge badge-con">Con Edison</span>
+      </div>
+    </div>
+
+    <div style="height: 24px;"></div>
+
+    <div class="phase-label">New mandate: sidewalk lighting (effective Jan 1, 2027)</div>
+
+    <div class="flow-row centered">
+      <div class="node node-single" style="border-color: #5f4a1e;">
+        <div class="node-label" style="color: #fbbf24;">300 commercial blocks per year</div>
+        <div class="node-desc">City Council <a href="https://ny1.com/nyc/all-boroughs/news/2025/11/17/new-legislation-will-bring-sidewalk-lighting-to-commercial-corridors" target="_blank">passed a law</a> requiring DOT to install pedestrian-oriented lighting on at least <strong>300 commercial blocks per year</strong> until every commercially zoned block meets a 1-footcandle average standard. Estimated cost: <strong>$27M/year</strong> (~$90K per block). Engineering note: <a href="https://inside.lighting/news/25-11/bold-lighting-mandate-reshape-nyc-streetscape" target="_blank">DOT has flagged</a> the 1-footcandle standard as potentially excessive -- IES RP-8 recommends ~0.9 fc for high-activity sidewalks.</div>
+        <span class="badge badge-dot">DOT</span>
+        <span class="badge badge-council">City Council</span>
+        <span class="badge badge-omb">OMB</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB: LED CONVERSION ==================== -->
+  <div class="flow-section" id="tab-led">
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-num">~400K</div>
+        <div class="stat-label">Streetlights converted to LED</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">50-65%</div>
+        <div class="stat-label">Energy reduction vs. prior tech</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">$14M</div>
+        <div class="stat-label">Annual savings (energy + maintenance)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">500K+</div>
+        <div class="stat-label">Statewide LED streetlights (NYPA)</div>
+      </div>
+    </div>
+
+    <div class="phase-label">NYC LED conversion timeline</div>
+
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-year">~2013</div>
+        <div class="tl-text"><a href="https://www.nyc.gov/html/dot/html/infrastructure/streetlights.shtml" target="_blank">DOT announces plan</a> to replace 250,000 streetlights with LEDs -- the largest municipal LED conversion in the country.</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-year">2014-2018</div>
+        <div class="tl-text">Rollout in waves of ~80,000 lights. Brooklyn, Queens, and the Bronx completed by 2018. Total project cost: <strong>$76.5 million</strong>.</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-year">2019</div>
+        <div class="tl-text">NYPA launches <a href="https://www.nypa.gov/news/press-releases/2019/20190418-smart-street-lighting-ny" target="_blank">"Smart Street Lighting NY"</a> statewide program in partnership with Signify (Philips). Over 130 municipalities participate.</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-year">2020</div>
+        <div class="tl-text">NYPA launches maintenance service for municipalities using NYPA's asset management controls.</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-year">Aug 2023</div>
+        <div class="tl-text">New York State <a href="https://www.governor.ny.gov/news/governor-hochul-announces-new-york-has-achieved-goal-install-500000-led-streetlights" target="_blank">achieves goal</a> of <strong>500,000 LED streetlights</strong> -- nearly 3 years ahead of the end-of-2025 target.</div>
+      </div>
+    </div>
+
+    <div style="height: 20px;"></div>
+    <div class="phase-label">Smart lighting capabilities</div>
+
+    <div class="flow-row">
+      <div class="node">
+        <div class="node-label">Integrated sensors</div>
+        <div class="node-desc">Smart LED fixtures can include cameras, weather sensors, energy meters, and other safety features as part of the NYPA/Signify platform.</div>
+        <span class="badge badge-nypa">NYPA</span>
+      </div>
+      <div class="node">
+        <div class="node-label">Remote monitoring</div>
+        <div class="node-desc">Asset management controls allow centralized monitoring and maintenance scheduling, reducing response times for outages.</div>
+        <span class="badge badge-dot">DOT</span>
+        <span class="badge badge-nypa">NYPA</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TAB: SYSTEM OVERVIEW ==================== -->
+  <div class="flow-section active" id="tab-overview">
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-num">~400K</div>
+        <div class="stat-label">Total streetlights citywide</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">6,300</div>
+        <div class="stat-label">Miles of streets covered</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">295.5M</div>
+        <div class="stat-label">kWh annual consumption</div>
+      </div>
+    </div>
+
+    <div class="phase-label">Agency roles</div>
+
+    <div class="flow-row">
+      <div class="node node-wide">
+        <div class="node-label">NYC Dept. of Transportation (DOT)</div>
+        <div class="node-desc"><strong>Primary owner and operator.</strong> The <a href="https://www.nyc.gov/html/dot/html/infrastructure/streetlights.shtml" target="_blank">Division of Street Lighting Engineering</a> handles all planning, engineering, permitting, installation approvals, and maintenance contracting. DOT owns the poles and fixtures (not Con Edison). Contracts with private electrical firms for physical work. Regulated by <a href="https://codelibrary.amlegal.com/codes/newyorkcity/latest/NYCrules/0-0-0-62948" target="_blank">NYC Highway Rules Section 2-20</a> and the <a href="https://www.nycstreetdesign.info/lighting" target="_blank">NYC Street Design Manual</a>.</div>
+        <span class="badge badge-dot">DOT</span>
+      </div>
+    </div>
+
+    <div style="height: 12px;"></div>
+
+    <div class="flow-row">
+      <div class="node">
+        <div class="node-label">Con Edison</div>
+        <div class="node-desc"><strong>Electricity provider only.</strong> Supplies power and installs electrical connections. Does not own poles or fixtures. Billed ~$50M/year by DOT for estimated usage (per DOT's <a href="https://www.nyc.gov/html/dot/downloads/pdf/sustainablestreetlighting.pdf" target="_blank">"Green Light" report</a>).</div>
+        <span class="badge badge-con">Con Edison</span>
+      </div>
+      <div class="node">
+        <div class="node-label">Office of Management and Budget</div>
+        <div class="node-desc">Reviews and approves distinctive lighting proposals. Controls capital and expense budget allocations for streetlight infrastructure.</div>
+        <span class="badge badge-omb">OMB</span>
+      </div>
+    </div>
+
+    <div style="height: 12px;"></div>
+
+    <div class="flow-row">
+      <div class="node">
+        <div class="node-label">Public Design Commission</div>
+        <div class="node-desc">Must approve all non-standard / distinctive streetlight designs before installation. <a href="https://www.nyc.gov/site/designcommission/design-review/design-guidelines/distinctive-lights.page" target="_blank">Encourages fixtures</a> sympathetic to neighborhood architectural and historic character.</div>
+        <span class="badge badge-pdc">Public Design Commission</span>
+      </div>
+      <div class="node">
+        <div class="node-label">City Council</div>
+        <div class="node-desc">51 members with discretionary capital funds. <strong>Required funder</strong> for all distinctive lighting. Passed the <a href="https://ny1.com/nyc/all-boroughs/news/2025/11/17/new-legislation-will-bring-sidewalk-lighting-to-commercial-corridors" target="_blank">2027 sidewalk lighting mandate</a> (300 blocks/year).</div>
+        <span class="badge badge-council">City Council</span>
+      </div>
+    </div>
+
+    <div style="height: 12px;"></div>
+
+    <div class="flow-row">
+      <div class="node">
+        <div class="node-label">Community boards</div>
+        <div class="node-desc"><strong>Advisory role.</strong> Submit annual budget requests for lighting upgrades. Receive and forward resident complaints. No direct approval authority.</div>
+        <span class="badge badge-cb">Community board</span>
+      </div>
+      <div class="node">
+        <div class="node-label">New York Power Authority (NYPA)</div>
+        <div class="node-desc">Runs the statewide <a href="https://www.nypa.gov/news/press-releases/2019/20190418-smart-street-lighting-ny" target="_blank">Smart Street Lighting NY</a> program. Provides upfront financing for LED conversions; municipalities repay from energy savings.</div>
+        <span class="badge badge-nypa">NYPA</span>
+      </div>
+    </div>
+
+    <div style="height: 24px;"></div>
+
+    <div class="phase-label">Regulatory framework</div>
+
+    <div class="flow-row">
+      <div class="node">
+        <div class="node-label">NYC Highway Rules, Section 2-20</div>
+        <div class="node-desc"><a href="https://codelibrary.amlegal.com/codes/newyorkcity/latest/NYCrules/0-0-0-62948" target="_blank">"Street Light and Power"</a> -- governs conduit specs (min 18" depth), conductor insulation, transformer grounding, and mechanical protection (within 8 ft of ground).</div>
+      </div>
+      <div class="node">
+        <div class="node-label">NYC Street Design Manual</div>
+        <div class="node-desc">Comprehensive reference for acceptable <a href="https://www.nycstreetdesign.info/lighting/standard-poles" target="_blank">pole types</a>, luminaire specifications, and design standards. Published by DOT at <a href="https://www.nycstreetdesign.info/lighting" target="_blank">nycstreetdesign.info</a>.</div>
+      </div>
+    </div>
+
+    <div style="height: 12px;"></div>
+
+    <div class="phase-label">Standard equipment</div>
+
+    <div class="flow-row">
+      <div class="node">
+        <div class="node-label">Standard street light (SSL)</div>
+        <div class="node-desc"><strong>Steel octagonal pole</strong> (30 ft tall, 8 ft arm) with LED cobra head luminaire. Highway spec: 110W max, IES Type II or III distribution.</div>
+      </div>
+      <div class="node">
+        <div class="node-label">Distinctive / Type M lamppost</div>
+        <div class="node-desc">Decorative one-piece base and shaft, intermediate shaft, mast arm, scroll and finial. 21" diameter round base. Requires PDC approval.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.flow-section').forEach(s => s.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>
